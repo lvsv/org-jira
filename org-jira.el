@@ -897,7 +897,7 @@ Expects input in format such as: [2017-04-05 Wed 01:00]--[2017-04-05 Wed 01:46] 
 
              ;; @todo :optim: This is inefficient, calling the resync on each update/insert event,
              ;; ideally we would track and only insert/update changed entries, as well
-             ;; only call a resync once (when the entire list is processed, which will
+             ;; only call a resync once (when the entire list is processed), which will
              ;; basically require a dry run to see how many items we should be updating.
 
              ;; Update via jiralib call

@@ -858,7 +858,7 @@ CALLBACK will be invoked if passed in upon endpoint completion."
   (setq time-spent-seconds (max 60 time-spent-seconds))
   (let ((worklog `((started . ,started)
                    ;; @todo :worklog: timeSpentSeconds changes into incorrect values
-                   ;; in the Jira API (for instance, 89600 = 1 day, but Jira thinks 3 days...
+                   ;; in the Jira API (for instance, 89600 = 1 day, but Jira thinks 3 days...)
                    ;; We should convert to a Xd Xh Xm format from our seconds ourselves.
                    (timeSpentSeconds . ,time-spent-seconds)
                    (comment . ,comment))))
@@ -873,7 +873,7 @@ CALLBACK will be invoked if passed in upon endpoint completion."
   (setq time-spent-seconds (max 60 time-spent-seconds))
   (let ((worklog `((started . ,started)
                    ;; @todo :worklog: timeSpentSeconds changes into incorrect values
-                   ;; in the Jira API (for instance, 89600 = 1 day, but Jira thinks 3 days...
+                   ;; in the Jira API (for instance, 89600 = 1 day, but Jira thinks 3 days...)
                    ;; We should convert to a Xd Xh Xm format from our seconds ourselves.
                    (timeSpentSeconds . ,time-spent-seconds)
                    (comment . ,comment))))
