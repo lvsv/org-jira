@@ -810,7 +810,7 @@ See`org-jira-get-issue-list'"
                       (let ((status (org-jira-get-issue-val 'status issue)))
                         (org-jira-insert (concat (cond (org-jira-use-status-as-todo
                                                         (upcase (replace-regexp-in-string " " "-" status)))
-                                                       ((member status org-jira-done-states) "DONE")
+                                                       ((member (org-jira-decode status) org-jira-done-states) "DONE")
                                                        ("TODO")) " "
                                                        issue-headline)))
                       (save-excursion
