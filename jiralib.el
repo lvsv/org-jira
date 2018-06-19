@@ -15,7 +15,7 @@
 ;; Alex Harsanyi <AlexHarsanyi@gmail.com>
 
 ;; Maintainer: Matthew Carter <m@ahungry.com>
-;; Version: 2.7.0
+;; Version: 3.0.0
 ;; Homepage: https://github.com/ahungry/org-jira
 
 ;; This file is not part of GNU Emacs.
@@ -63,6 +63,7 @@
 ;;; News:
 
 ;;;; Changes since 2.6.3:
+;; - Add worklog import filter and control variable for external worklogs.
 ;; - Add the worklog related endpoint/calls.
 
 ;;;; Changes since 2.1.0:
@@ -86,7 +87,7 @@
 (require 'json)
 (require 'url-parse)
 
-(defconst jiralib-version "2.7.0"
+(defconst jiralib-version "3.0.0"
   "Current version of jiralib.el.")
 
 (defgroup jiralib nil
@@ -153,14 +154,14 @@ This will be used with USERNAME to compute password from
   :group 'jiralib-faces)
 
 (defvar jiralib-mode-hook nil)
-
 (defvar jiralib-mode-map nil)
+(defvar jiralib-issue-regexp "\\<\\(?:[A-Za-z]+\\)-[0-9]+\\>")
 
 (defcustom jiralib-wsdl-descriptor-url
   ""
   "The location for the WSDL descriptor for the JIRA service.
 This is specific to your local JIRA installation.  The URL is
-tipically:
+typically:
 
   http://YOUR_INSTALLATION/rpc/soap/jirasoapservice-v2?wsdl
 
@@ -187,6 +188,19 @@ This is maintained by `jiralib-login'.")
 
 (defvar jiralib-wsdl nil)
 
+(defcustom jiralib-worklog-import--filters-alist
+  (list
+   '(nil "WorklogUpdatedByCurrentUser" (lambda (wl) (let-alist wl (when (and wl (string-equal (downcase (or jiralib-user-login-name user-login-name)) (downcase .updateAuthor.name))) wl))))
+   '(nil "WorklogAuthoredByCurrentUser" (lambda (wl) (let-alist wl (when (and wl (string-equal (downcase (or jiralib-user-login-name user-login-name)) (downcase .author.name))) wl)))))
+  "A list of triplets: ('Global-Enable 'Descriptive-Label 'Function-Definition)
+that apply worklog predicate filters during import.
+
+Example: (list '('t \"descriptive-predicate-label\" (lambda (x) x)))"
+  :type '(repeat (list boolean string function))
+  :group 'org-jira)
+
+
+
 (defun jiralib-load-wsdl ()
   "Load the JIRA WSDL descriptor."
   (setq jiralib-wsdl (soap-load-wsdl-from-url (if (string-equal jiralib-wsdl-descriptor-url "")
@@ -196,7 +210,7 @@ This is maintained by `jiralib-login'.")
 (defun jiralib-login (username password)
   "Login into JIRA as user USERNAME with PASSWORD.
 
-After a succesful login, store the authentication token in
+After a successful login, store the authentication token in
 `jiralib-token'."
   ;; NOTE that we cannot rely on `jiralib-call' because `jiralib-call' relies on
   ;; us ;-)
@@ -238,7 +252,7 @@ This function should be used for all JIRA interface calls, as the
 method ensures the user is logged in and invokes `soap-invoke'
 with the correct service name and authentication token.
 
-All JIRA inteface methods take an authentication token as the
+All JIRA interface methods take an authentication token as the
 first argument.  The authentication token is supplied by this
 function, so PARAMS should omit this parameter.  For example, the
 \"getIssue\" method takes two parameters: auth and key, however,
@@ -334,6 +348,10 @@ request.el, so if at all possible, it should be avoided."
       ('getComments (org-jira-find-value
                      (jiralib--rest-call-it
                       (format "/rest/api/2/issue/%s/comment" (first params)))
+                     'comments))
+      ('getAttachmentsFromIssue (org-jira-find-value
+                     (jiralib--rest-call-it
+                      (format "/rest/api/2/issue/%s?fields=attachment" (first params)))
                      'comments))
       ('getComponents (jiralib--rest-call-it
                        (format "/rest/api/2/project/%s/components" (first params))))
@@ -559,14 +577,16 @@ will cache it."
           (jiralib-make-assoc-list (jiralib-call "getResolutions" nil) 'id 'name)))
   jiralib-resolution-code-cache)
 
-(defvar jiralib-issue-regexp nil)
-
 ;; NOTE: it is not such a good idea to use this, as it needs a JIRA
 ;; connection to construct the regexp (the user might be prompted for a JIRA
 ;; username and password).
 ;;
 ;; The best use of this function is to generate the regexp once-off and
 ;; persist it somewhere.
+;;
+;; FIXME: Probably just deprecate/remove this, we can assert we're on
+;; an issue with a general regexp that matches the common format, vs
+;; needing to know specific user project list.
 (defun jiralib-get-issue-regexp ()
   "Return a regexp that will match an issue id.
 
@@ -845,6 +865,10 @@ will cache it."
   "Return all comments associated with issue ISSUE-KEY, invoking CALLBACK."
   (jiralib-call "getComments" callback issue-key))
 
+(defun jiralib-get-attachments (issue-key &optional callback)
+  "Return all attachments associated with issue ISSUE-KEY, invoking CALLBACK."
+  (jiralib-call "getAttachmentsFromIssue" callback issue-key))
+
 (defun jiralib-get-worklogs (issue-key &optional callback)
   "Return all worklogs associated with issue ISSUE-KEY, invoking CALLBACK."
   (jiralib-call "getWorklogs" callback issue-key))
@@ -955,6 +979,66 @@ Return no more than MAX-NUM-RESULTS."
 (defun jiralib-strip-cr (string)
   "Remove carriage returns from STRING."
   (when string (replace-regexp-in-string "\r" "" string)))
+
+(defun jiralib-worklog-import--filter-apply
+    (worklog-obj &optional predicate-fn-lst unwrap-worklog-records-fn rewrap-worklog-records-fn)
+  "Remove non-matching org-jira issue worklogs.
+
+Variables:
+  WORKLOG-OBJ is the passed in object
+  PREDICATE-FN-LST is the list of lambdas used as match predicates.
+  UNWRAP-WORKLOG-RECORDS-FN is the function used to produce the list of worklog records from within the worklog-obj
+  REWRAP-WORKLOG-RECORDS-FN is the function used to reshape the worklog records back into the form they were received in.
+
+Auxiliary Notes:
+  Only the WORKLOG-OBJ variable is required.
+  The value of PPREDICATE-FN-LST is filled from the jiralib-worklog-import--filters-alist variable by default.
+  If PREDICATE-FN-LST is empty the unmodified value of WORKLOG-OBJ is returned.
+  If PREDICATE-FN-LST contains multiple predicate functions, each predicate filters operates as a clause in an AND match.  In effect, a worklog must match all predicates to be returned.
+  The variable 'jiralib-user-login-name is used by many lambda filters."
+
+  (let
+      ((unwrap-worklog-records-fn)
+       (rewrap-worklog-records-fn)
+       (predicate-fn-lst)
+       (worklogs worklog-obj)
+       (predicate-fn))
+    ;; let-body
+    (progn
+      (setq unwrap-worklog-records-fn
+	    (if (and
+		 (boundp 'unwrap-worklog-records-fn)
+		 (functionp unwrap-worklog-records-fn))
+		unwrap-worklog-records-fn
+	      (lambda (x) (coerce x 'list))))
+      (setq rewrap-worklog-records-fn
+	    (if (and
+		 (boundp 'rewrap-worklog-records-fn)
+		 (functionp rewrap-worklog-records-fn))
+		rewrap-worklog-records-fn
+	      (lambda (x) (remove 'nil (coerce x 'vector)))))
+      (setq predicate-fn-lst
+	    (if (and (boundp 'predicate-fn-lst)
+		     (not (null predicate-fn-lst))
+		     (listp predicate-fn-lst))
+		predicate-fn-lst
+	      (mapcar 'caddr
+		      (remove 'nil
+			      (mapcar (lambda (x) (unless (null (car x)) x))
+				      jiralib-worklog-import--filters-alist)))))
+      ;; final condition/sanity checks before processing
+      (cond
+       ;; pass cases, don't apply filters, return unaltered worklog-obj
+       ((or (not (boundp 'predicate-fn-lst)) (not (listp predicate-fn-lst)) (null predicate-fn-lst))
+	worklog-obj)
+       ;; default-case, apply worklog filters and return only matching worklogs
+       (t
+	(setq worklogs (funcall unwrap-worklog-records-fn worklogs))
+	(while (setq predicate-fn (pop predicate-fn-lst))
+	  (setq worklogs (mapcar predicate-fn worklogs)))
+	(funcall rewrap-worklog-records-fn worklogs))))))
+
+
 
 (provide 'jiralib)
 ;;; jiralib.el ends here
