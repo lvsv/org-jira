@@ -204,6 +204,10 @@ variables.
   "Use the JIRA status as the TODO tag value."
   :group 'org-jira)
 
+(defcustom org-jira-tasks-common-tag nil
+  "Add tag for all JIRA tasks."
+  :group 'org-jira)
+
 (defcustom org-jira-coding-system nil
   "Use custom coding system on org-jira buffers."
   :group 'org-jira)
@@ -824,6 +828,16 @@ See`org-jira-get-issue-list'"
                          (point))
                        (replace-regexp-in-string "-" "_" issue-id)
                        nil)
+                      (if org-jira-tasks-common-tag
+                          (org-change-tag-in-region
+                           (point-min)
+                           (save-excursion
+                             (forward-line 1)
+                             (point))
+                           org-jira-tasks-common-tag
+                           nil)
+                          nil
+                        )
 
                       (mapc (lambda (entry)
                               (let ((val (org-jira-get-issue-val entry issue)))
