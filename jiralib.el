@@ -513,10 +513,10 @@ NOTE: Status codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, then
 will cache it."
-  (unless jiralib-status-codes-cache
+  (unless (assoc jira-server-name jiralib-status-codes-cache)
     (setq jiralib-status-codes-cache
-          (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name)))
-  jiralib-status-codes-cache)
+         (append jiralib-status-codes-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name)))))
+  (assoc jira-server-name jiralib-status-codes-cache))
 
 (defvar jiralib-issue-types-cache nil)
 
