@@ -516,7 +516,7 @@ will cache it."
   (unless (assoc jira-server-name jiralib-status-codes-cache)
     (setq jiralib-status-codes-cache
          (append jiralib-status-codes-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name)))))
-  (assoc jira-server-name jiralib-status-codes-cache))
+  (cdr (assoc jira-server-name jiralib-status-codes-cache)))
 
 (defvar jiralib-issue-types-cache nil)
 
