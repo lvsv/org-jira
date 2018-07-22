@@ -983,10 +983,10 @@ Return no more than MAX-NUM-RESULTS."
 
 (defun jiralib-get-users (project-key)
   "Return assignable users information given the PROJECT-KEY."
-  (unless jiralib-users-cache
+  (unless (assoc jira-server-name jiralib-users-cache)
     (setq jiralib-users-cache
-          (jiralib-call "getUsers" nil project-key)))
-  jiralib-users-cache)
+          (append jiralib-users-cache (list (cons jira-server-name (jiralib-call "getUsers" nil project-key))))))
+  (cdr (assoc jira-server-name jiralib-users-cache)))
 
 (defun jiralib-get-versions (project-key)
   "Return all versions available in project PROJECT-KEY."
