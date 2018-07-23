@@ -563,10 +563,10 @@ NOTE: Priority codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, than
 will cache it."
-  (unless jiralib-priority-codes-cache
+  (unless (assoc jira-server-name jiralib-priority-codes-cache)
     (setq jiralib-priority-codes-cache
-          (jiralib-make-assoc-list (jiralib-call "getPriorities" nil) 'id 'name)))
-  jiralib-priority-codes-cache)
+          (append jiralib-priority-codes-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getPriorities" nil) 'id 'name)))))
+  (cdr (assoc jira-server-name jiralib-priority-codes-cache)))
 
 (defvar jiralib-resolution-code-cache nil)
 
