@@ -1500,14 +1500,18 @@ purpose of wiping an old subtree."
 (defvar org-jira-fields-history nil)
 (defun org-jira-read-field (fields)
   "Read (custom) FIELDS for workflow progress."
-  (let ((field-desc (completing-read
+  (let* ((fields-history (cdr (assoc jira-server-name org-jira-fields-history)))
+         (field-desc (completing-read
                      "More fields to set: "
                      (cons "Thanks, no more fields are *required*." (mapcar 'org-jira-decode (mapcar 'cdr fields)))
                      nil
                      t
                      nil
-                     'org-jira-fields-history))
+                     'fields-history))
         field-name)
+
+    (assq-delete-all jira-server-name org-jira-fields-history)
+    (setq org-jira-fields-history (append org-jira-fields-history (list (cons jira-server-name fields-history))))
     (setq field-name (car (rassoc field-desc fields)))
     (if field-name
         (intern field-name)
