@@ -1529,14 +1529,16 @@ Used in org-jira-read-resolution and org-jira-progress-issue calls.")
 (defun org-jira-read-resolution ()
   "Read issue workflow progress resolution."
   (if (not jiralib-use-restapi)
-      (let ((resolution (completing-read
+      (let* ((resolution-history (cdr (assoc jira-server-name org-jira-resolution-history)))
+            (resolution (completing-read
                          "Resolution: "
                          (mapcar 'cdr (jiralib-get-resolutions))
                          nil
                          t
                          nil
-                         'org-jira-resolution-history
-                         (car org-jira-resolution-history))))
+                         'resolution-history)))
+        (assq-delete-all jira-server-name org-jira-resolution-history)
+        (setq org-jira-resolution-history (append org-jira-resolution-history (list (cons jira-server-name resolution-history))))
         (car (rassoc resolution (jiralib-get-resolutions))))
     (let* ((resolutions (org-jira-find-value org-jira-rest-fields 'resolution 'allowedValues))
            (resolution-name (completing-read
