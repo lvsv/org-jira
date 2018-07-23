@@ -360,29 +360,29 @@ instance."
 
 (defvar org-jira-entry-mode-map
   (let ((org-jira-map (make-sparse-keymap)))
-    (define-key org-jira-map (kbd "C-c pg") 'org-jira-get-projects)
-    (define-key org-jira-map (kbd "C-c bg") 'org-jira-get-boards)
-    (define-key org-jira-map (kbd "C-c iv") 'org-jira-get-issues-by-board)
-    (define-key org-jira-map (kbd "C-c ib") 'org-jira-browse-issue)
-    (define-key org-jira-map (kbd "C-c ig") 'org-jira-get-issues)
-    (define-key org-jira-map (kbd "C-c ih") 'org-jira-get-issues-headonly)
+    (define-key org-jira-map (kbd "C-c pg") 'org-jira-execute-get-projects)
+    (define-key org-jira-map (kbd "C-c bg") 'org-jira-execute-get-boards)
+    (define-key org-jira-map (kbd "C-c iv") 'org-jira-execute-get-issues-by-board)
+    (define-key org-jira-map (kbd "C-c ib") 'org-jira-execute-browse-issue)
+    (define-key org-jira-map (kbd "C-c ig") 'org-jira-execute-get-issues)
+    (define-key org-jira-map (kbd "C-c ih") 'org-jira-execute-get-issues-headonly)
     ;;(define-key org-jira-map (kbd "C-c if") 'org-jira-get-issues-from-filter-headonly)
     ;;(define-key org-jira-map (kbd "C-c iF") 'org-jira-get-issues-from-filter)
-    (define-key org-jira-map (kbd "C-c iu") 'org-jira-update-issue)
-    (define-key org-jira-map (kbd "C-c iw") 'org-jira-progress-issue)
-    (define-key org-jira-map (kbd "C-c in") 'org-jira-progress-issue-next)
-    (define-key org-jira-map (kbd "C-c ia") 'org-jira-assign-issue)
-    (define-key org-jira-map (kbd "C-c ir") 'org-jira-refresh-issue)
-    (define-key org-jira-map (kbd "C-c iR") 'org-jira-refresh-issues-in-buffer)
-    (define-key org-jira-map (kbd "C-c ic") 'org-jira-create-issue)
-    (define-key org-jira-map (kbd "C-c ik") 'org-jira-copy-current-issue-key)
-    (define-key org-jira-map (kbd "C-c sc") 'org-jira-create-subtask)
-    (define-key org-jira-map (kbd "C-c sg") 'org-jira-get-subtasks)
-    (define-key org-jira-map (kbd "C-c cc") 'org-jira-add-comment)
-    (define-key org-jira-map (kbd "C-c cu") 'org-jira-update-comment)
-    (define-key org-jira-map (kbd "C-c wu") 'org-jira-update-worklogs-from-org-clocks)
-    (define-key org-jira-map (kbd "C-c tj") 'org-jira-todo-to-jira)
-    (define-key org-jira-map (kbd "C-c if") 'org-jira-get-issues-by-fixversion)
+    (define-key org-jira-map (kbd "C-c iu") 'org-jira-execute-update-issue)
+    (define-key org-jira-map (kbd "C-c iw") 'org-jira-execute-progress-issue)
+    (define-key org-jira-map (kbd "C-c in") 'org-jira-execute-progress-issue-next)
+    (define-key org-jira-map (kbd "C-c ia") 'org-jira-execute-assign-issue)
+    (define-key org-jira-map (kbd "C-c ir") 'org-jira-execute-refresh-issue)
+    (define-key org-jira-map (kbd "C-c iR") 'org-jira-execute-refresh-issues-in-buffer)
+    (define-key org-jira-map (kbd "C-c ic") 'org-jira-execute-create-issue)
+    (define-key org-jira-map (kbd "C-c ik") 'org-jira-execute-copy-current-issue-key)
+    (define-key org-jira-map (kbd "C-c sc") 'org-jira-execute-create-subtask)
+    (define-key org-jira-map (kbd "C-c sg") 'org-jira-execute-get-subtasks)
+    (define-key org-jira-map (kbd "C-c cc") 'org-jira-execute-add-comment)
+    (define-key org-jira-map (kbd "C-c cu") 'org-jira-execute-update-comment)
+    (define-key org-jira-map (kbd "C-c wu") 'org-jira-execute-update-worklogs-from-org-clocks)
+    (define-key org-jira-map (kbd "C-c tj") 'org-jira-execute-todo-to-jira)
+    (define-key org-jira-map (kbd "C-c if") 'org-jira-execute-get-issues-by-fixversion)
     org-jira-map))
 
 ;;;###autoload
@@ -878,6 +878,7 @@ See`org-jira-get-issue-list'"
 
                       (org-jira-entry-put (point) "ID" (org-jira-get-issue-key issue))
                       (org-jira-entry-put (point) "CUSTOM_ID" (org-jira-get-issue-key issue))
+                      (org-jira-entry-put (point) "CUSTOM_SERVER" (symbol-name jira-server-name))
 
                       ;; Insert the duedate as a deadline if it exists
                       (when org-jira-deadline-duedate-sync-p
@@ -1996,6 +1997,142 @@ See `org-jira-get-issues-from-filter'."
 		    (org-jira-entry-put (point) "url" board-url)
                     (org-jira-entry-put (point) "ID" (number-to-string board-id))))
 		boards))))))
+
+;;;###autoload
+(defun org-jira-execute (jira-func)
+  "Execute org-jira function with jira-server-name environment."
+  (let ((jira-server-name-env-func (org-jira-get-issue-val-from-org 'custom_server)))
+    (if jira-server-name-env-func
+        (progn
+          (funcall (intern jira-server-name-env-func))
+          (call-interactively jira-func))
+      (call-interactively jira-func))))
+
+;;;###autoload
+(defun org-jira-execute-get-projects ()
+  "Execute org-jira-get-projects"
+  (interactive)
+  (org-jira-execute 'org-jira-get-projects))
+
+;;;###autoload
+(defun org-jira-execute-update-issue ()
+  "Execute org-jira-update-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-update-issue))
+
+;;;###autoload
+(defun org-jira-execute-progress-issue ()
+  "Execute org-jira-progress-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-progress-issue))
+
+;;;###autoload
+(defun org-jira-execute-progress-issue-next ()
+  "Execute org-jira-progress-issue-next"
+  (interactive)
+  (org-jira-execute 'org-jira-progress-issue-next))
+
+;;;###autoload
+(defun org-jira-execute-assign-issue ()
+  "Execute org-jira-assign-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-assign-issue))
+
+;;;###autoload
+(defun org-jira-execute-add-comment ()
+  "Execute org-jira-add-comment"
+  (interactive)
+  (org-jira-execute 'org-jira-add-comment))
+
+;;;###autoload
+(defun org-jira-execute-update-comment ()
+  "Execute org-jira-update-comment"
+  (interactive)
+  (org-jira-execute 'org-jira-update-comment))
+
+;;;###autoload
+(defun org-jira-execute-update-worklogs-from-org-clocks ()
+  "Execute org-jira-update-worklogs-from-org-clocks"
+  (interactive)
+  (org-jira-execute 'org-jira-update-worklogs-from-org-clocks))
+
+;;;###autoload
+(defun org-jira-execute-get-boards ()
+  "Execute org-jira-get-boards"
+  (interactive)
+  (org-jira-execute 'org-jira-get-boards))
+
+;;;###autoload
+(defun org-jira-execute-get-issues-by-board ()
+  "Execute org-jira-get-issues-by-board"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues-by-board))
+
+;;;###autoload
+(defun org-jira-execute-browse-issue ()
+  "Execute org-jira-browse-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-browse-issue))
+
+;;;###autoload
+(defun org-jira-execute-get-issues ()
+  "Execute org-jira-get-issues"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues))
+
+;;;###autoload
+(defun org-jira-execute-get-issues-headonly ()
+  "Execute org-jira-get-issues-headonly"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues-headonly))
+
+;;;###autoload
+(defun org-jira-execute-refresh-issue ()
+  "Execute org-jira-refresh-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-refresh-issue))
+
+;;;###autoload
+(defun org-jira-execute-refresh-issues-in-buffer ()
+  "Execute org-jira-refresh-issues-in-buffer"
+  (interactive)
+  (org-jira-execute 'org-jira-refresh-issues-in-buffer))
+
+;;;###autoload
+(defun org-jira-execute-create-issue ()
+  "Execute org-jira-create-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-create-issue))
+
+;;;###autoload
+(defun org-jira-execute-copy-current-issue-key ()
+  "Execute org-jira-copy-current-issue-key"
+  (interactive)
+  (org-jira-execute 'org-jira-copy-current-issue-key))
+
+;;;###autoload
+(defun org-jira-execute-create-subtask ()
+  "Execute org-jira-create-subtask"
+  (interactive)
+  (org-jira-execute 'org-jira-create-subtask))
+
+;;;###autoload
+(defun org-jira-execute-get-subtasks ()
+  "Execute org-jira-get-subtasks"
+  (interactive)
+  (org-jira-execute 'org-jira-get-subtasks))
+
+;;;###autoload
+(defun org-jira-execute-todo-to-jira ()
+  "Execute org-jira-todo-to-jira"
+  (interactive)
+  (org-jira-execute 'org-jira-todo-to-jira))
+
+;;;###autoload
+(defun org-jira-execute-get-issues-by-fixversion ()
+  "Execute org-jira-get-issues-by-fixversion"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues-by-fixversion))
 
 (provide 'org-jira)
 ;;; org-jira.el ends here
