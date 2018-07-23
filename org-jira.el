@@ -1484,15 +1484,18 @@ purpose of wiping an old subtree."
 (defvar org-jira-actions-history nil)
 (defun org-jira-read-action (actions)
   "Read issue workflow progress ACTIONS."
-  (let ((action (completing-read
+  (let* ((actions-history (cdr (assoc jira-server-name org-jira-actions-history)))
+         (action (completing-read
                  "Action: "
                  (mapcar 'cdr actions)
                  nil
                  t
                  nil
-                 'org-jira-actions-history
-                 (car org-jira-actions-history))))
-    (car (rassoc action actions))))
+                 'actions-history)))
+    (progn
+      (assq-delete-all jira-server-name org-jira-actions-history)
+      (setq org-jira-actions-history (append org-jira-actions-history (list (cons jira-server-name actions-history))))
+      (car (rassoc action actions)))))
 
 (defvar org-jira-fields-history nil)
 (defun org-jira-read-field (fields)
