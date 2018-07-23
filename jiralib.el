@@ -872,10 +872,10 @@ NOTE: Issue type codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, than
 will cache it."
-  (unless jiralib-subtask-types-cache
+  (unless (assoc jira-server-name jiralib-subtask-types-cache)
     (setq jiralib-subtask-types-cache
-          (jiralib-make-assoc-list (jiralib-call "getSubTaskIssueTypes" nil) 'id 'name)))
-  jiralib-subtask-types-cache)
+          (append jiralib-subtask-types-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getSubTaskIssueTypes" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-subtask-types-cache)))
 
 (defun jiralib-get-comments (issue-key &optional callback)
   "Return all comments associated with issue ISSUE-KEY, invoking CALLBACK."
