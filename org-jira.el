@@ -2019,7 +2019,7 @@ See `org-jira-get-issues-from-filter'."
 (defun org-jira-execute (jira-func)
   "Execute org-jira function with jira-server-name environment."
   (let ((jira-server-name-env-func (org-jira-get-issue-val-from-org 'custom_server)))
-    (if jira-server-name-env-func
+    (if (and jira-server-name-env-func (not (equal "" jira-server-name-env-func)))
         (progn
           (funcall (intern jira-server-name-env-func))
           (call-interactively jira-func))
