@@ -1492,10 +1492,9 @@ purpose of wiping an old subtree."
                  t
                  nil
                  'actions-history)))
-    (progn
       (assq-delete-all jira-server-name org-jira-actions-history)
       (setq org-jira-actions-history (append org-jira-actions-history (list (cons jira-server-name actions-history))))
-      (car (rassoc action actions)))))
+      (car (rassoc action actions))))
 
 (defvar org-jira-fields-history nil)
 (defun org-jira-read-field (fields)
