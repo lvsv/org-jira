@@ -515,7 +515,7 @@ This function will only ask JIRA for the list of codes once, then
 will cache it."
   (unless (assoc jira-server-name jiralib-status-codes-cache)
     (setq jiralib-status-codes-cache
-         (append jiralib-status-codes-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name)))))
+         (append jiralib-status-codes-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name))))))
   (cdr (assoc jira-server-name jiralib-status-codes-cache)))
 
 (defvar jiralib-issue-types-cache nil)
@@ -538,7 +538,7 @@ For applying issue types to a given project that is being created, see
 the #'jiralib-get-issue-types-by-project call."
   (unless (assoc jira-server-name jiralib-issue-types-cache)
     (setq jiralib-issue-types-cache
-          (append jiralib-issue-types-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getIssueTypes" nil) 'id 'name)))))
+          (append jiralib-issue-types-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getIssueTypes" nil) 'id 'name))))))
   (cdr (assoc jira-server-name jiralib-issue-types-cache)))
 
 (defvar jiralib-issue-types-by-project-cache nil "An alist of available issue types.")
@@ -565,7 +565,7 @@ This function will only ask JIRA for the list of codes once, than
 will cache it."
   (unless (assoc jira-server-name jiralib-priority-codes-cache)
     (setq jiralib-priority-codes-cache
-          (append jiralib-priority-codes-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getPriorities" nil) 'id 'name)))))
+          (append jiralib-priority-codes-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getPriorities" nil) 'id 'name))))))
   (cdr (assoc jira-server-name jiralib-priority-codes-cache)))
 
 (defvar jiralib-resolution-code-cache nil)
