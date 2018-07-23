@@ -576,10 +576,10 @@ NOTE: Resolution codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, than
 will cache it."
-  (unless jiralib-resolution-code-cache
+  (unless (assoc jira-server-name jiralib-resolution-code-cache)
     (setq jiralib-resolution-code-cache
-          (jiralib-make-assoc-list (jiralib-call "getResolutions" nil) 'id 'name)))
-  jiralib-resolution-code-cache)
+          (append jiralib-resolution-code-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getResolutions" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-resolution-code-cache)))
 
 ;; NOTE: it is not such a good idea to use this, as it needs a JIRA
 ;; connection to construct the regexp (the user might be prompted for a JIRA
