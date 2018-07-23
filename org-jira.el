@@ -1323,14 +1323,18 @@ purpose of wiping an old subtree."
 
 (defun org-jira-read-project ()
   "Read project name."
-  (completing-read
-   "Project: "
-   (jiralib-make-list (jiralib-get-projects) 'key)
-   nil
-   t
-   nil
-   'org-jira-project-read-history
-   (car org-jira-project-read-history)))
+  (let* ((project-read-history (cdr (assoc jira-server-name org-jira-project-read-history)))
+         (projects (completing-read
+                   "Project: "
+                   (jiralib-make-list (jiralib-get-projects) 'key)
+                   nil
+                   t
+                   nil
+                   'project-read-history)))
+
+    (assq-delete-all jira-server-name org-jira-project-read-history)
+    (setq org-jira-project-read-history (append org-jira-project-read-history (list (cons jira-server-name project-read-history))))
+    projects))
 
 (defun org-jira-read-board ()
   "Read board name. Returns cons pair (name . integer-id)"
