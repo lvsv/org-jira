@@ -536,10 +536,10 @@ types need a name lookup when given an id.
 
 For applying issue types to a given project that is being created, see
 the #'jiralib-get-issue-types-by-project call."
-  (unless jiralib-issue-types-cache
+  (unless (assoc jira-server-name jiralib-issue-types-cache)
     (setq jiralib-issue-types-cache
-          (jiralib-make-assoc-list (jiralib-call "getIssueTypes" nil) 'id 'name)))
-  jiralib-issue-types-cache)
+          (append jiralib-issue-types-cache (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getIssueTypes" nil) 'id 'name)))))
+  (cdr (assoc jira-server-name jiralib-issue-types-cache)))
 
 (defvar jiralib-issue-types-by-project-cache nil "An alist of available issue types.")
 
