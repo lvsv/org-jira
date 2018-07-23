@@ -1351,14 +1351,17 @@ purpose of wiping an old subtree."
 
 (defun org-jira-read-priority ()
   "Read priority name."
-  (completing-read
-   "Priority: "
-   (mapcar 'cdr (jiralib-get-priorities))
-   nil
-   t
-   nil
-   'org-jira-priority-read-history
-   (car org-jira-priority-read-history)))
+  (let* ((priority-read-history (cdr (assoc jira-server-name org-jira-priority-read-history)))
+         (priorities (completing-read
+                      "Priority: "
+                      (mapcar 'cdr (jiralib-get-priorities))
+                      nil
+                      t
+                      nil
+                      'priority-read-history)))
+    (assq-delete-all jira-server-name org-jira-priority-read-history)
+    (setq org-jira-priority-read-history (append org-jira-priority-read-history (list (cons jira-server-name priority-read-history))))
+    priorities))
 
 (defun org-jira-read-issue-type (&optional project)
   "Read issue type name.  PROJECT is the optional project key."
