@@ -1338,13 +1338,15 @@ purpose of wiping an old subtree."
 
 (defun org-jira-read-board ()
   "Read board name. Returns cons pair (name . integer-id)"
-  (let* ((boards-alist
+  (let* ((boards-read-history (cdr (assoc jira-server-name org-jira-boards-read-history)))
+         (boards-alist
 	  (jiralib-make-assoc-list (jiralib-get-boards) 'name 'id))
 	 (board-name
 	  (completing-read "Boards: "  boards-alist
 			   nil  t  nil
-			   'org-jira-boards-read-history
-			   (car org-jira-boards-read-history))))
+			   'boards-read-history)))
+    (assq-delete-all jira-server-name org-jira-boards-read-history)
+    (setq org-jira-boards-read-history (append org-jira-boards-read-history (list (cons jira-server-name boards-read-history))))
     (assoc board-name boards-alist)))
 
 (defun org-jira-read-priority ()
