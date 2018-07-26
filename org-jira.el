@@ -360,29 +360,29 @@ instance."
 
 (defvar org-jira-entry-mode-map
   (let ((org-jira-map (make-sparse-keymap)))
-    (define-key org-jira-map (kbd "C-c pg") 'org-jira-get-projects)
-    (define-key org-jira-map (kbd "C-c bg") 'org-jira-get-boards)
-    (define-key org-jira-map (kbd "C-c iv") 'org-jira-get-issues-by-board)
-    (define-key org-jira-map (kbd "C-c ib") 'org-jira-browse-issue)
-    (define-key org-jira-map (kbd "C-c ig") 'org-jira-get-issues)
-    (define-key org-jira-map (kbd "C-c ih") 'org-jira-get-issues-headonly)
+    (define-key org-jira-map (kbd "C-c pg") 'org-jira-execute-get-projects)
+    (define-key org-jira-map (kbd "C-c bg") 'org-jira-execute-get-boards)
+    (define-key org-jira-map (kbd "C-c iv") 'org-jira-execute-get-issues-by-board)
+    (define-key org-jira-map (kbd "C-c ib") 'org-jira-execute-browse-issue)
+    (define-key org-jira-map (kbd "C-c ig") 'org-jira-execute-get-issues)
+    (define-key org-jira-map (kbd "C-c ih") 'org-jira-execute-get-issues-headonly)
     ;;(define-key org-jira-map (kbd "C-c if") 'org-jira-get-issues-from-filter-headonly)
     ;;(define-key org-jira-map (kbd "C-c iF") 'org-jira-get-issues-from-filter)
-    (define-key org-jira-map (kbd "C-c iu") 'org-jira-update-issue)
-    (define-key org-jira-map (kbd "C-c iw") 'org-jira-progress-issue)
-    (define-key org-jira-map (kbd "C-c in") 'org-jira-progress-issue-next)
-    (define-key org-jira-map (kbd "C-c ia") 'org-jira-assign-issue)
-    (define-key org-jira-map (kbd "C-c ir") 'org-jira-refresh-issue)
-    (define-key org-jira-map (kbd "C-c iR") 'org-jira-refresh-issues-in-buffer)
-    (define-key org-jira-map (kbd "C-c ic") 'org-jira-create-issue)
-    (define-key org-jira-map (kbd "C-c ik") 'org-jira-copy-current-issue-key)
-    (define-key org-jira-map (kbd "C-c sc") 'org-jira-create-subtask)
-    (define-key org-jira-map (kbd "C-c sg") 'org-jira-get-subtasks)
-    (define-key org-jira-map (kbd "C-c cc") 'org-jira-add-comment)
-    (define-key org-jira-map (kbd "C-c cu") 'org-jira-update-comment)
-    (define-key org-jira-map (kbd "C-c wu") 'org-jira-update-worklogs-from-org-clocks)
-    (define-key org-jira-map (kbd "C-c tj") 'org-jira-todo-to-jira)
-    (define-key org-jira-map (kbd "C-c if") 'org-jira-get-issues-by-fixversion)
+    (define-key org-jira-map (kbd "C-c iu") 'org-jira-execute-update-issue)
+    (define-key org-jira-map (kbd "C-c iw") 'org-jira-execute-progress-issue)
+    (define-key org-jira-map (kbd "C-c in") 'org-jira-execute-progress-issue-next)
+    (define-key org-jira-map (kbd "C-c ia") 'org-jira-execute-assign-issue)
+    (define-key org-jira-map (kbd "C-c ir") 'org-jira-execute-refresh-issue)
+    (define-key org-jira-map (kbd "C-c iR") 'org-jira-execute-refresh-issues-in-buffer)
+    (define-key org-jira-map (kbd "C-c ic") 'org-jira-execute-create-issue)
+    (define-key org-jira-map (kbd "C-c ik") 'org-jira-execute-copy-current-issue-key)
+    (define-key org-jira-map (kbd "C-c sc") 'org-jira-execute-create-subtask)
+    (define-key org-jira-map (kbd "C-c sg") 'org-jira-execute-get-subtasks)
+    (define-key org-jira-map (kbd "C-c cc") 'org-jira-execute-add-comment)
+    (define-key org-jira-map (kbd "C-c cu") 'org-jira-execute-update-comment)
+    (define-key org-jira-map (kbd "C-c wu") 'org-jira-execute-update-worklogs-from-org-clocks)
+    (define-key org-jira-map (kbd "C-c tj") 'org-jira-execute-todo-to-jira)
+    (define-key org-jira-map (kbd "C-c if") 'org-jira-execute-get-issues-by-fixversion)
     org-jira-map))
 
 ;;;###autoload
@@ -878,6 +878,7 @@ See`org-jira-get-issue-list'"
 
                       (org-jira-entry-put (point) "ID" (org-jira-get-issue-key issue))
                       (org-jira-entry-put (point) "CUSTOM_ID" (org-jira-get-issue-key issue))
+                      (org-jira-entry-put (point) "CUSTOM_SERVER" (symbol-name jira-server-name))
 
                       ;; Insert the duedate as a deadline if it exists
                       (when org-jira-deadline-duedate-sync-p
@@ -1322,36 +1323,45 @@ purpose of wiping an old subtree."
 
 (defun org-jira-read-project ()
   "Read project name."
-  (completing-read
-   "Project: "
-   (jiralib-make-list (jiralib-get-projects) 'key)
-   nil
-   t
-   nil
-   'org-jira-project-read-history
-   (car org-jira-project-read-history)))
+  (let* ((project-read-history (cdr (assoc jira-server-name org-jira-project-read-history)))
+         (projects (completing-read
+                   "Project: "
+                   (jiralib-make-list (jiralib-get-projects) 'key)
+                   nil
+                   t
+                   nil
+                   'project-read-history)))
+
+    (assq-delete-all jira-server-name org-jira-project-read-history)
+    (setq org-jira-project-read-history (append org-jira-project-read-history (list (cons jira-server-name project-read-history))))
+    projects))
 
 (defun org-jira-read-board ()
   "Read board name. Returns cons pair (name . integer-id)"
-  (let* ((boards-alist
+  (let* ((boards-read-history (cdr (assoc jira-server-name org-jira-boards-read-history)))
+         (boards-alist
 	  (jiralib-make-assoc-list (jiralib-get-boards) 'name 'id))
 	 (board-name
 	  (completing-read "Boards: "  boards-alist
 			   nil  t  nil
-			   'org-jira-boards-read-history
-			   (car org-jira-boards-read-history))))
+			   'boards-read-history)))
+    (assq-delete-all jira-server-name org-jira-boards-read-history)
+    (setq org-jira-boards-read-history (append org-jira-boards-read-history (list (cons jira-server-name boards-read-history))))
     (assoc board-name boards-alist)))
 
 (defun org-jira-read-priority ()
   "Read priority name."
-  (completing-read
-   "Priority: "
-   (mapcar 'cdr (jiralib-get-priorities))
-   nil
-   t
-   nil
-   'org-jira-priority-read-history
-   (car org-jira-priority-read-history)))
+  (let* ((priority-read-history (cdr (assoc jira-server-name org-jira-priority-read-history)))
+         (priorities (completing-read
+                      "Priority: "
+                      (mapcar 'cdr (jiralib-get-priorities))
+                      nil
+                      t
+                      nil
+                      'priority-read-history)))
+    (assq-delete-all jira-server-name org-jira-priority-read-history)
+    (setq org-jira-priority-read-history (append org-jira-priority-read-history (list (cons jira-server-name priority-read-history))))
+    priorities))
 
 (defun org-jira-read-issue-type (&optional project)
   "Read issue type name.  PROJECT is the optional project key."
@@ -1483,27 +1493,33 @@ purpose of wiping an old subtree."
 (defvar org-jira-actions-history nil)
 (defun org-jira-read-action (actions)
   "Read issue workflow progress ACTIONS."
-  (let ((action (completing-read
+  (let* ((actions-history (cdr (assoc jira-server-name org-jira-actions-history)))
+         (action (completing-read
                  "Action: "
                  (mapcar 'cdr actions)
                  nil
                  t
                  nil
-                 'org-jira-actions-history
-                 (car org-jira-actions-history))))
-    (car (rassoc action actions))))
+                 'actions-history)))
+      (assq-delete-all jira-server-name org-jira-actions-history)
+      (setq org-jira-actions-history (append org-jira-actions-history (list (cons jira-server-name actions-history))))
+      (car (rassoc action actions))))
 
 (defvar org-jira-fields-history nil)
 (defun org-jira-read-field (fields)
   "Read (custom) FIELDS for workflow progress."
-  (let ((field-desc (completing-read
+  (let* ((fields-history (cdr (assoc jira-server-name org-jira-fields-history)))
+         (field-desc (completing-read
                      "More fields to set: "
                      (cons "Thanks, no more fields are *required*." (mapcar 'org-jira-decode (mapcar 'cdr fields)))
                      nil
                      t
                      nil
-                     'org-jira-fields-history))
+                     'fields-history))
         field-name)
+
+    (assq-delete-all jira-server-name org-jira-fields-history)
+    (setq org-jira-fields-history (append org-jira-fields-history (list (cons jira-server-name fields-history))))
     (setq field-name (car (rassoc field-desc fields)))
     (if field-name
         (intern field-name)
@@ -1518,14 +1534,16 @@ Used in org-jira-read-resolution and org-jira-progress-issue calls.")
 (defun org-jira-read-resolution ()
   "Read issue workflow progress resolution."
   (if (not jiralib-use-restapi)
-      (let ((resolution (completing-read
+      (let* ((resolution-history (cdr (assoc jira-server-name org-jira-resolution-history)))
+            (resolution (completing-read
                          "Resolution: "
                          (mapcar 'cdr (jiralib-get-resolutions))
                          nil
                          t
                          nil
-                         'org-jira-resolution-history
-                         (car org-jira-resolution-history))))
+                         'resolution-history)))
+        (assq-delete-all jira-server-name org-jira-resolution-history)
+        (setq org-jira-resolution-history (append org-jira-resolution-history (list (cons jira-server-name resolution-history))))
         (car (rassoc resolution (jiralib-get-resolutions))))
     (let* ((resolutions (org-jira-find-value org-jira-rest-fields 'resolution 'allowedValues))
            (resolution-name (completing-read
@@ -1996,6 +2014,142 @@ See `org-jira-get-issues-from-filter'."
 		    (org-jira-entry-put (point) "url" board-url)
                     (org-jira-entry-put (point) "ID" (number-to-string board-id))))
 		boards))))))
+
+;;;###autoload
+(defun org-jira-execute (jira-func)
+  "Execute org-jira function with jira-server-name environment."
+  (let ((jira-server-name-env-func (org-jira-get-issue-val-from-org 'custom_server)))
+    (if (and jira-server-name-env-func (not (equal "" jira-server-name-env-func)))
+        (progn
+          (funcall (intern jira-server-name-env-func))
+          (call-interactively jira-func))
+      (call-interactively jira-func))))
+
+;;;###autoload
+(defun org-jira-execute-get-projects ()
+  "Execute org-jira-get-projects"
+  (interactive)
+  (org-jira-execute 'org-jira-get-projects))
+
+;;;###autoload
+(defun org-jira-execute-update-issue ()
+  "Execute org-jira-update-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-update-issue))
+
+;;;###autoload
+(defun org-jira-execute-progress-issue ()
+  "Execute org-jira-progress-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-progress-issue))
+
+;;;###autoload
+(defun org-jira-execute-progress-issue-next ()
+  "Execute org-jira-progress-issue-next"
+  (interactive)
+  (org-jira-execute 'org-jira-progress-issue-next))
+
+;;;###autoload
+(defun org-jira-execute-assign-issue ()
+  "Execute org-jira-assign-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-assign-issue))
+
+;;;###autoload
+(defun org-jira-execute-add-comment ()
+  "Execute org-jira-add-comment"
+  (interactive)
+  (org-jira-execute 'org-jira-add-comment))
+
+;;;###autoload
+(defun org-jira-execute-update-comment ()
+  "Execute org-jira-update-comment"
+  (interactive)
+  (org-jira-execute 'org-jira-update-comment))
+
+;;;###autoload
+(defun org-jira-execute-update-worklogs-from-org-clocks ()
+  "Execute org-jira-update-worklogs-from-org-clocks"
+  (interactive)
+  (org-jira-execute 'org-jira-update-worklogs-from-org-clocks))
+
+;;;###autoload
+(defun org-jira-execute-get-boards ()
+  "Execute org-jira-get-boards"
+  (interactive)
+  (org-jira-execute 'org-jira-get-boards))
+
+;;;###autoload
+(defun org-jira-execute-get-issues-by-board ()
+  "Execute org-jira-get-issues-by-board"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues-by-board))
+
+;;;###autoload
+(defun org-jira-execute-browse-issue ()
+  "Execute org-jira-browse-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-browse-issue))
+
+;;;###autoload
+(defun org-jira-execute-get-issues ()
+  "Execute org-jira-get-issues"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues))
+
+;;;###autoload
+(defun org-jira-execute-get-issues-headonly ()
+  "Execute org-jira-get-issues-headonly"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues-headonly))
+
+;;;###autoload
+(defun org-jira-execute-refresh-issue ()
+  "Execute org-jira-refresh-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-refresh-issue))
+
+;;;###autoload
+(defun org-jira-execute-refresh-issues-in-buffer ()
+  "Execute org-jira-refresh-issues-in-buffer"
+  (interactive)
+  (org-jira-execute 'org-jira-refresh-issues-in-buffer))
+
+;;;###autoload
+(defun org-jira-execute-create-issue ()
+  "Execute org-jira-create-issue"
+  (interactive)
+  (org-jira-execute 'org-jira-create-issue))
+
+;;;###autoload
+(defun org-jira-execute-copy-current-issue-key ()
+  "Execute org-jira-copy-current-issue-key"
+  (interactive)
+  (org-jira-execute 'org-jira-copy-current-issue-key))
+
+;;;###autoload
+(defun org-jira-execute-create-subtask ()
+  "Execute org-jira-create-subtask"
+  (interactive)
+  (org-jira-execute 'org-jira-create-subtask))
+
+;;;###autoload
+(defun org-jira-execute-get-subtasks ()
+  "Execute org-jira-get-subtasks"
+  (interactive)
+  (org-jira-execute 'org-jira-get-subtasks))
+
+;;;###autoload
+(defun org-jira-execute-todo-to-jira ()
+  "Execute org-jira-todo-to-jira"
+  (interactive)
+  (org-jira-execute 'org-jira-todo-to-jira))
+
+;;;###autoload
+(defun org-jira-execute-get-issues-by-fixversion ()
+  "Execute org-jira-get-issues-by-fixversion"
+  (interactive)
+  (org-jira-execute 'org-jira-get-issues-by-fixversion))
 
 (provide 'org-jira)
 ;;; org-jira.el ends here

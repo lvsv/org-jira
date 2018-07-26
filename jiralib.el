@@ -513,10 +513,10 @@ NOTE: Status codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, then
 will cache it."
-  (unless jiralib-status-codes-cache
+  (unless (assoc jira-server-name jiralib-status-codes-cache)
     (setq jiralib-status-codes-cache
-          (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name)))
-  jiralib-status-codes-cache)
+         (append jiralib-status-codes-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getStatuses" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-status-codes-cache)))
 
 (defvar jiralib-issue-types-cache nil)
 
@@ -536,10 +536,10 @@ types need a name lookup when given an id.
 
 For applying issue types to a given project that is being created, see
 the #'jiralib-get-issue-types-by-project call."
-  (unless jiralib-issue-types-cache
+  (unless (assoc jira-server-name jiralib-issue-types-cache)
     (setq jiralib-issue-types-cache
-          (jiralib-make-assoc-list (jiralib-call "getIssueTypes" nil) 'id 'name)))
-  jiralib-issue-types-cache)
+          (append jiralib-issue-types-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getIssueTypes" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-issue-types-cache)))
 
 (defvar jiralib-issue-types-by-project-cache nil "An alist of available issue types.")
 
@@ -563,10 +563,10 @@ NOTE: Priority codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, than
 will cache it."
-  (unless jiralib-priority-codes-cache
+  (unless (assoc jira-server-name jiralib-priority-codes-cache)
     (setq jiralib-priority-codes-cache
-          (jiralib-make-assoc-list (jiralib-call "getPriorities" nil) 'id 'name)))
-  jiralib-priority-codes-cache)
+          (append jiralib-priority-codes-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getPriorities" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-priority-codes-cache)))
 
 (defvar jiralib-resolution-code-cache nil)
 
@@ -576,10 +576,10 @@ NOTE: Resolution codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, than
 will cache it."
-  (unless jiralib-resolution-code-cache
+  (unless (assoc jira-server-name jiralib-resolution-code-cache)
     (setq jiralib-resolution-code-cache
-          (jiralib-make-assoc-list (jiralib-call "getResolutions" nil) 'id 'name)))
-  jiralib-resolution-code-cache)
+          (append jiralib-resolution-code-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getResolutions" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-resolution-code-cache)))
 
 ;; NOTE: it is not such a good idea to use this, as it needs a JIRA
 ;; connection to construct the regexp (the user might be prompted for a JIRA
@@ -872,10 +872,10 @@ NOTE: Issue type codes are stored as strings, not numbers.
 
 This function will only ask JIRA for the list of codes once, than
 will cache it."
-  (unless jiralib-subtask-types-cache
+  (unless (assoc jira-server-name jiralib-subtask-types-cache)
     (setq jiralib-subtask-types-cache
-          (jiralib-make-assoc-list (jiralib-call "getSubTaskIssueTypes" nil) 'id 'name)))
-  jiralib-subtask-types-cache)
+          (append jiralib-subtask-types-cache (list (cons jira-server-name (jiralib-make-assoc-list (jiralib-call "getSubTaskIssueTypes" nil) 'id 'name))))))
+  (cdr (assoc jira-server-name jiralib-subtask-types-cache)))
 
 (defun jiralib-get-comments (issue-key &optional callback)
   "Return all comments associated with issue ISSUE-KEY, invoking CALLBACK."
@@ -983,10 +983,10 @@ Return no more than MAX-NUM-RESULTS."
 
 (defun jiralib-get-users (project-key)
   "Return assignable users information given the PROJECT-KEY."
-  (unless jiralib-users-cache
+  (unless (assoc jira-server-name jiralib-users-cache)
     (setq jiralib-users-cache
-          (jiralib-call "getUsers" nil project-key)))
-  jiralib-users-cache)
+          (append jiralib-users-cache (list (cons jira-server-name (jiralib-call "getUsers" nil project-key))))))
+  (cdr (assoc jira-server-name jiralib-users-cache)))
 
 (defun jiralib-get-versions (project-key)
   "Return all versions available in project PROJECT-KEY."
