@@ -701,14 +701,17 @@ Re-create it with CLOCKS.  This is used for worklogs."
 Default is unresolved issues assigned to current login user; with
 a prefix argument you are given the chance to enter your own
 jql."
-  (let ((jql org-jira-default-jql))
+  (let ((jql-history (cdr (assoc jira-server-name org-jira-jql-history)))
+        (jql org-jira-default-jql))
     (when current-prefix-arg
       (setq jql (read-string "Jql: "
-                             (if org-jira-jql-history
-                                 (car org-jira-jql-history)
+                             (if jql-history
+                                 (car jql-history)
                                "assignee = currentUser() and resolution = unresolved")
-                             'org-jira-jql-history
+                             'jql-history
                              "assignee = currentUser() and resolution = unresolved")))
+    (assq-delete-all jira-server-name org-jira-jql-history)
+    (setq org-jira-jql-history (append org-jira-jql-history (list (cons jira-server-name jql-history))))
     (list (jiralib-do-jql-search jql nil callback))))
 
 (defun org-jira-get-issue-by-id (id)
