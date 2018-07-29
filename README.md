@@ -166,6 +166,75 @@ re-query the endpoints to get these lists:
      ("141" . "Re-open"))))
 ```
 
+### Multiserver support
+You can try the multi-server configuration. To do this, you must
+specify the environment functions for each of the configurations. In
+each function, you need to define the following variables:
+
+```lisp
+     (setq jira-server-name 'env/first-jira-example)
+     (setq jiralib-url "https://first.jira.example.com")
+```
+
+After execution `org-jira-get-issues` in the appropriate environment
+each ticket will get property `CUSTOM_SERVER` with `jira-server-name`
+environment function.
+
+Working example with three different jira-servers.
+
+Define the environment functions:
+
+```lisp
+(defun env/jira-server1 ()
+   "Environment for jira-server1"
+   (setq jira-server-name 'env/jira-server1)
+   (setq jiralib-url "https://jira.one.example.com")
+   (jiralib-login "user1" "user1pass"))
+
+(defun env/jira-another-server ()
+   "Environment for jira-another-server"
+   (setq jira-server-name 'env/jira-another-server)
+   (setq jiralib-url "https://jira.two.example.com")
+   (jiralib-login "user2" "user2pass"))
+
+;; access to jira.space.example.com through socks5 server
+(defun env/jira-socks-server ()
+   "Environment for jira-socks-server"
+   (setq jira-server-name 'env/jira-socks-server)
+   (setq request-curl-options '("-k" "-x" "socks5://127.0.0.1:11111"))
+   (setq jiralib-url "https://jira.space.example.com")
+   (jiralib-login "user3" "user3pass"))
+
+```
+
+Define the start functions for each environment:
+
+```lisp
+(defun start/get-all-issues-from-server1 ()
+    "Load jira issues from jira-server1"
+    (interactive)
+    (funcall 'env/jira-server1)
+        (call-interactively 'org-jira-get-issues))
+
+(defun start/get-all-issues-from-another-server ()
+    "Load jira issues from jira-another-server"
+    (interactive)
+    (funcall 'env/jira-another-server)
+        (call-interactively 'org-jira-get-issues))
+
+(defun start/get-all-issues-from-socks-server ()
+    "Load jira issues from jira-socks-server"
+    (interactive)
+    (funcall 'env/jira-socks-server)
+        (call-interactively 'org-jira-get-issues))
+
+```
+
+Now you can execute `M-x start/get-all-issues-from-server1`
+or any of start/* functions, wait until it ends and you wil get
+your tickets.
+
+
 ## About
 ### Maintainer
 You can reach me directly: Matthew Carter <m@ahungry.com>, or file an
