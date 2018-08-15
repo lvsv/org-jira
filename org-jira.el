@@ -211,6 +211,10 @@ variables.
   :group 'org-jira
   :type '(alist :value-type plist))
 
+(defcustom org-jira-tasks-common-tag nil
+  "Add tag for all JIRA tasks."
+  :group 'org-jira)
+
 (defcustom org-jira-use-status-as-todo nil
   "Use the JIRA status as the TODO tag value."
   :group 'org-jira)
@@ -904,6 +908,16 @@ representing ISSUE."
                       (save-excursion
                         (org-back-to-heading t)
                         (org-set-tags-to (replace-regexp-in-string "-" "_" issue-id)))
+
+                      (if org-jira-tasks-common-tag
+                          (org-change-tag-in-region
+                           (point-min)
+                           (save-excursion
+                             (forward-line 1)
+                             (point))
+                           org-jira-tasks-common-tag
+                           nil)
+                          nil)
 
                       (mapc (lambda (entry)
                               (let ((val (org-jira-get-issue-val entry issue)))
